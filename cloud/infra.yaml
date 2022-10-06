@@ -1,0 +1,113 @@
+AWSTemplateFormatVersion: 2010-09-09
+
+Description: |
+  Assessment test 2
+
+Resources:
+
+  LambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      Policies:
+        - PolicyName: LambdaPolicy
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Action:
+                  - 'logs:CreateLogGroup'
+                  - 'logs:CreateLogStream'
+                  - 'logs:PutLogEvents'
+                Resource:
+                  - 'arn:aws:logs:*:*:*'
+                Effect: Allow
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Action:
+              - sts:AssumeRole
+            Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+
+  Lambda:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: 'getFruit'
+      Role: !GetAtt LambdaRole.Arn
+      Handler: index.handler
+      Runtime: nodejs16.x
+      MemorySize: 128
+      Code:
+        ZipFile: |
+          exports.handler = async (event) => {
+            const response = {
+              body: JSON.stringify([
+                { id: '1', name: 'Banana', price: 1 },
+                { id: '2', name: 'Pineapple', price: 2 },
+                { id: '3', name: 'Orange', price: 2 },
+                { id: '4', name: 'Mango', price: 5 },
+                { id: '5', name: 'Melon', price: 9 },
+              ]),
+              statusCode: 200
+            }
+            return response
+          }
+
+  LambdaInvokePermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref Lambda
+      Action: "lambda:InvokeFunction"
+      Principal: apigateway.amazonaws.com
+
+  LambdaIntegration:
+    Type: AWS::ApiGatewayV2::Integration
+    Properties:
+      ApiId: !Ref MyApiGateway
+      Description: Lambda proxy integration
+      IntegrationType: AWS_PROXY
+      IntegrationMethod: POST
+      PayloadFormatVersion: "2.0"
+      IntegrationUri: !Sub 'arn:${AWS::Partition}:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${Lambda.Arn}/invocations'
+
+  MyApiGateway:
+    Type: AWS::ApiGatewayV2::Api
+    Properties:
+      Name: "MyApiGateway"
+      ProtocolType: "HTTP"
+      # CorsConfiguration:
+      #   AllowHeaders:
+      #     - Authorization
+      #   AllowMethods:
+      #     - GET
+      #     - POST
+      #     - OPTIONS
+      #   AllowOrigins:
+      #     - '*'
+
+  MyApiGatewayStage:
+    Type: AWS::ApiGatewayV2::Stage
+    Properties:
+      AutoDeploy: true
+      DeploymentId: !Ref MyApiGatewayDeployment
+      StageName: '$default'
+      ApiId: !Ref MyApiGateway
+  
+  MyApiGatewayDeployment:
+    Type: AWS::ApiGatewayV2::Deployment
+    DependsOn:
+      - MyApiRoute
+    Properties:
+      ApiId: !Ref MyApiGateway
+
+  MyApiRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref MyApiGateway
+      RouteKey: "GET /"
+      AuthorizationType: NONE
+      Target: !Join
+        - /
+        - - integrations
+          - !Ref LambdaIntegration
