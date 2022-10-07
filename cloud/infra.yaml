@@ -4,7 +4,6 @@ Description: |
   Assessment test 2
 
 Resources:
-
   LambdaRole:
     Type: AWS::IAM::Role
     Properties:
@@ -14,11 +13,11 @@ Resources:
             Version: 2012-10-17
             Statement:
               - Action:
-                  - 'logs:CreateLogGroup'
-                  - 'logs:CreateLogStream'
-                  - 'logs:PutLogEvents'
+                  - "logs:CreateLogGroup"
+                  - "logs:CreateLogStream"
+                  - "logs:PutLogEvents"
                 Resource:
-                  - 'arn:aws:logs:*:*:*'
+                  - "arn:aws:logs:*:*:*"
                 Effect: Allow
       AssumeRolePolicyDocument:
         Version: 2012-10-17
@@ -33,7 +32,7 @@ Resources:
   Lambda:
     Type: AWS::Lambda::Function
     Properties:
-      FunctionName: 'getFruit'
+      FunctionName: "getFruit"
       Role: !GetAtt LambdaRole.Arn
       Handler: index.handler
       Runtime: nodejs16.x
@@ -69,31 +68,31 @@ Resources:
       IntegrationType: AWS_PROXY
       IntegrationMethod: POST
       PayloadFormatVersion: "2.0"
-      IntegrationUri: !Sub 'arn:${AWS::Partition}:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${Lambda.Arn}/invocations'
+      IntegrationUri: !Sub "arn:${AWS::Partition}:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${Lambda.Arn}/invocations"
 
   MyApiGateway:
     Type: AWS::ApiGatewayV2::Api
     Properties:
-      Name: "MyApiGateway"
+      Name: "sallaAPI"
       ProtocolType: "HTTP"
-      # CorsConfiguration:
-      #   AllowHeaders:
-      #     - Authorization
-      #   AllowMethods:
-      #     - GET
-      #     - POST
-      #     - OPTIONS
-      #   AllowOrigins:
-      #     - '*'
+      CorsConfiguration:
+        AllowHeaders:
+          - Authorization
+        AllowMethods:
+          - GET
+          - POST
+          - OPTIONS
+        AllowOrigins:
+          - "*"
 
   MyApiGatewayStage:
     Type: AWS::ApiGatewayV2::Stage
     Properties:
       AutoDeploy: true
       DeploymentId: !Ref MyApiGatewayDeployment
-      StageName: '$default'
+      StageName: "$default"
       ApiId: !Ref MyApiGateway
-  
+
   MyApiGatewayDeployment:
     Type: AWS::ApiGatewayV2::Deployment
     DependsOn:
@@ -111,3 +110,39 @@ Resources:
         - /
         - - integrations
           - !Ref LambdaIntegration
+
+  sallas3bucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      AccessControl: PublicRead
+      CorsConfiguration:
+        CorsRules:
+          - AllowedHeaders:
+              - "*"
+            AllowedMethods:
+              - GET
+              - PUT
+              - DELETE
+            AllowedOrigins:
+              - "*"
+            ExposedHeaders:
+              - Date
+      BucketName: "salla2bucket"
+      WebsiteConfiguration:
+        IndexDocument: index.html
+        ErrorDocument: error.html
+
+  Outputs:
+  WebsiteURL:
+    Value: !GetAtt
+      - sallas3bucket
+      - WebsiteURL
+    Description: URL for S3 static website
+  S3BucketSecureURL:
+    Value: !Join
+      - ""
+      - - "https://"
+        - !GetAtt
+          - sallas3bucket
+          - DomainName
+    Description: S3 bucket to hold website content
