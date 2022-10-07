@@ -36,6 +36,9 @@ export function Fruit() {
       })
       .then((data) => {
         setFruits(data);
+      })
+      .catch(err => {
+        console.error(err);
       });
   };
 
