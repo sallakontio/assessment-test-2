@@ -32,7 +32,7 @@ Resources:
   Lambda:
     Type: AWS::Lambda::Function
     Properties:
-      FunctionName: "getFruit"
+      FunctionName: "sallagetFruit"
       Role: !GetAtt LambdaRole.Arn
       Handler: index.handler
       Runtime: nodejs16.x
@@ -132,7 +132,7 @@ Resources:
         IndexDocument: index.html
         ErrorDocument: error.html
 
-  Outputs:
+Outputs:
   WebsiteURL:
     Value: !GetAtt
       - sallas3bucket
