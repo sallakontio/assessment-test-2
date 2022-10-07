@@ -131,18 +131,22 @@ Resources:
       WebsiteConfiguration:
         IndexDocument: index.html
         ErrorDocument: error.html
-
-Outputs:
-  WebsiteURL:
-    Value: !GetAtt
-      - sallas3bucket
-      - WebsiteURL
-    Description: URL for S3 static website
-  S3BucketSecureURL:
-    Value: !Join
-      - ""
-      - - "https://"
-        - !GetAtt
-          - sallas3bucket
-          - DomainName
-    Description: S3 bucket to hold website content
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+  BucketPolicy:
+    Type: "AWS::S3::BucketPolicy"
+    Properties:
+      PolicyDocument:
+        Id: SallaPolicy
+        Version: 2012-10-17
+        Statement:
+          - Sid: PublicReadForGetBucketObjects
+            Effect: Allow
+            Principal: "*"
+            Action: "s3:GetObject"
+            Resource: !Join
+              - ""
+              - - "arn:aws:s3:::"
+                - !Ref sallas3bucket
+                - /*
+      Bucket: !Ref sallas3bucket
